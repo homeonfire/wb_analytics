@@ -42,10 +42,10 @@ class SyncSalesCommand extends Command
 
             while (true) {
                 try {
-                    $response = $wb->api->Statistics()->salesFromDate($currentDateFrom->toRfc3339String());
+                    $response = retry(3, fn () => $wb->api->Statistics()->salesFromDate($currentDateFrom), 3000);
                 } catch (\Exception $e) {
                     $this->error("API Error: " . $e->getMessage());
-                    break;
+                    return self::FAILURE;
                 }
 
                 $sales = is_array($response) ? $response : ($response->data ?? []);
@@ -95,15 +95,7 @@ class SyncSalesCommand extends Command
                     }
                 }
 
-                if ($maxLastChangeDate->lessThanOrEqualTo($currentDateFrom)) {
-                    $currentDateFrom = $currentDateFrom->addSecond();
-                } else {
-                    $currentDateFrom = $maxLastChangeDate;
-                }
-
-                if (count($sales) > 2000) {
-                    sleep(1);
-                }
+                break;
             }
         }
         $this->info("Sales sync completed.");

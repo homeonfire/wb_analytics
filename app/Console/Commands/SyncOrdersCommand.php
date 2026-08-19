@@ -42,10 +42,10 @@ class SyncOrdersCommand extends Command
 
             while (true) {
                 try {
-                    $response = $wb->api->Statistics()->ordersFromDate($currentDateFrom->toRfc3339String());
+                    $response = retry(3, fn () => $wb->api->Statistics()->ordersFromDate($currentDateFrom), 3000);
                 } catch (\Exception $e) {
                     $this->error("API Error: " . $e->getMessage());
-                    break;
+                    return self::FAILURE;
                 }
 
                 $orders = is_array($response) ? $response : ($response->data ?? []);
@@ -75,7 +75,7 @@ class SyncOrdersCommand extends Command
                         'discount_percent' => $order->discountPercent ?? 0,
                         'finished_price' => $order->finishedPrice ?? 0,
                         'is_cancel' => $order->isCancel ?? false,
-                        'cancel_dt' => $order->cancelDate ? Carbon::parse($order->cancelDate) : null,
+                        'cancel_dt' => !empty($order->cancelDate) ? Carbon::parse($order->cancelDate) : null,
                         'warehouse_name' => $order->warehouseName ?? null,
                         'oblast_okrug_name' => $order->oblastOkrugName ?? null,
                         'updated_at' => Carbon::now(),
@@ -93,15 +93,7 @@ class SyncOrdersCommand extends Command
                     }
                 }
 
-                if ($maxLastChangeDate->lessThanOrEqualTo($currentDateFrom)) {
-                    $currentDateFrom = $currentDateFrom->addSecond();
-                } else {
-                    $currentDateFrom = $maxLastChangeDate;
-                }
-
-                if (count($orders) > 2000) {
-                    sleep(2);
-                }
+                break;
             }
         }
         $this->info("Orders sync completed.");
