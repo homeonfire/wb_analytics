@@ -31,36 +31,40 @@ class SyncAnalyticsCommand extends Command
             $chunks = array_chunk($nmIds, 20);
 
             foreach ($chunks as $chunk) {
-                $retryCount = 0;
-                $success = false;
                 $response = null;
+                $lastError = null;
 
-                while ($retryCount < 10 && !$success) {
-                    $response = Http::withHeaders([
-                        'Authorization' => $store->api_key_standard,
-                        'Accept' => 'application/json'
-                    ])->timeout(30)->post('https://seller-analytics-api.wildberries.ru/api/analytics/v3/sales-funnel/products/history', [
-                        'selectedPeriod' => [
-                            'start' => $dateFrom,
-                            'end' => $dateTo
-                        ],
-                        'nmIds' => $chunk,
-                        'aggregationLevel' => 'day',
-                        'skipDeletedNm' => false
-                    ]);
+                for ($attempt = 1; $attempt <= 5; $attempt++) {
+                    try {
+                        $response = Http::withHeaders([
+                            'Authorization' => $store->api_key_standard,
+                            'Accept' => 'application/json',
+                        ])->connectTimeout(15)->timeout(90)->post('https://seller-analytics-api.wildberries.ru/api/analytics/v3/sales-funnel/products/history', [
+                            'selectedPeriod' => ['start' => $dateFrom, 'end' => $dateTo],
+                            'nmIds' => $chunk,
+                            'aggregationLevel' => 'day',
+                            'skipDeletedNm' => false,
+                        ]);
+                        if ($response->successful()) break;
 
-                    if ($response->status() === 429) {
-                        $this->warn("Rate limit hit, sleeping 22s...");
-                        sleep(22);
-                        $retryCount++;
-                    } else {
-                        $success = true;
+                        $lastError = "HTTP {$response->status()}: ".mb_substr($response->body(), 0, 1000);
+                        if ($response->status() !== 429 && $response->status() < 500) break;
+                    } catch (\Illuminate\Http\Client\ConnectionException $exception) {
+                        $lastError = $exception->getMessage();
+                    }
+
+                    if ($attempt < 5) {
+                        $delay = $response?->status() === 429
+                            ? max(22, (int) $response->header('Retry-After'))
+                            : min(30, $attempt * 5);
+                        $this->warn("Analytics request attempt {$attempt} failed; retrying in {$delay}s.");
+                        sleep($delay);
                     }
                 }
 
-                if (!$success || !$response->successful()) {
-                    $this->error("Failed to fetch analytics: " . ($response ? $response->body() : 'No response'));
-                    continue;
+                if (!$response?->successful()) {
+                    $this->error("Failed to fetch analytics after retries: ".($lastError ?? 'No response'));
+                    return self::FAILURE;
                 }
 
                 $data = $response->json();
