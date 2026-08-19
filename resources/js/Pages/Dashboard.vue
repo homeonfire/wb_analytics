@@ -16,6 +16,10 @@ const ClientOnly = defineComponent({
   },
 })
 
+const formatNumber = (value) => new Intl.NumberFormat('ru-RU', {
+    maximumFractionDigits: 0,
+}).format(Number(value) || 0).replace(/[\u00a0\u202f]/g, ' ');
+
 const props = defineProps({
     stats: {
         type: Object,
@@ -142,7 +146,7 @@ const topProductsOptions = computed(() => ({
                 </CardHeader>
                 <CardContent class="relative z-10">
                     <div class="text-3xl font-bold tracking-tight text-white mb-1">
-                        ₽{{ stats?.revenue?.toLocaleString() ?? 0 }}
+                        {{ formatNumber(stats?.revenue) }} ₽
                     </div>
                     <p class="text-xs text-emerald-500 flex items-center mt-1">
                         +12% <span class="text-zinc-500 ml-1">к прошлому периоду</span>
