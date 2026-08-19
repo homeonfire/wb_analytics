@@ -15,9 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '172.17.0.1');
 
         $middleware->web(append: [
+            \App\Http\Middleware\StoreMiddleware::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
-            \App\Http\Middleware\StoreMiddleware::class,
         ]);
 
         //
