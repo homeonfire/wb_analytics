@@ -11,12 +11,12 @@ use Carbon\Carbon;
 
 class SyncProductsCommand extends Command
 {
-    protected $signature = 'wb:sync-products';
+    protected $signature = 'wb:sync-products {--store=}';
     protected $description = 'Sync products and SKUs from WB';
 
     public function handle()
     {
-        $stores = Store::whereNotNull('api_key_standard')->get();
+        $stores = Store::whereNotNull('api_key_standard')->when($this->option('store'), fn ($query, $storeId) => $query->whereKey($storeId))->get();
 
         foreach ($stores as $store) {
             $this->info("Syncing store: {$store->name}");

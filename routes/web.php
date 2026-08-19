@@ -16,6 +16,7 @@ use App\Http\Controllers\AdvertController;
 use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\LogisticsController;
 use App\Http\Controllers\PlansController;
+use App\Http\Controllers\SyncController;
 
 Route::get('/debug-db', function () {
     $order = \App\Models\OrderRaw::whereNotNull('srid')->first();
@@ -40,6 +41,11 @@ Route::middleware('auth')->group(function () {
     Route::resource('managers', ManagerController::class)->only(['index', 'store']);
     Route::post('managers/{manager}/bind', [ManagerController::class, 'bindProducts'])->name('managers.bind');
     Route::resource('plans', PlansController::class)->only(['index', 'store']);
+    Route::get('/sync', [SyncController::class, 'index'])->name('sync.index');
+    Route::post('/sync/run', [SyncController::class, 'run'])->name('sync.run');
+    Route::post('/sync/schedules', [SyncController::class, 'schedule'])->name('sync.schedules.store');
+    Route::patch('/sync/schedules/{schedule}/toggle', [SyncController::class, 'toggle'])->name('sync.schedules.toggle');
+    Route::delete('/sync/schedules/{schedule}', [SyncController::class, 'destroy'])->name('sync.schedules.destroy');
 });
 
 Route::middleware('auth')->group(function () {

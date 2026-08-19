@@ -11,12 +11,12 @@ use Illuminate\Support\Facades\DB;
 
 class SyncDataCommand extends Command
 {
-    protected $signature = 'wb:sync-data';
+    protected $signature = 'wb:sync-data {--store=}';
     protected $description = 'Sync prices and discounts from WB';
 
     public function handle()
     {
-        $stores = Store::whereNotNull('api_key_standard')->get();
+        $stores = Store::whereNotNull('api_key_standard')->when($this->option('store'), fn ($query, $storeId) => $query->whereKey($storeId))->get();
 
         foreach ($stores as $store) {
             $this->info("Syncing prices for store: {$store->name}");
@@ -41,7 +41,7 @@ class SyncDataCommand extends Command
                     continue;
                 }
 
-                $productId = Product::where('nm_id', $nmId)->value('id');
+                $productId = Product::where('store_id', $store->id)->where('nm_id', $nmId)->value('id');
                 if (!$productId) {
                     continue;
                 }

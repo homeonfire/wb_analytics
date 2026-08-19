@@ -11,12 +11,12 @@ use Illuminate\Support\Facades\DB;
 
 class SyncAdvertsCommand extends Command
 {
-    protected $signature = 'wb:sync-adverts';
+    protected $signature = 'wb:sync-adverts {--store=}';
     protected $description = 'Sync advert campaigns from WB';
 
     public function handle()
     {
-        $stores = Store::whereNotNull('api_key_advert')->get();
+        $stores = Store::whereNotNull('api_key_advert')->when($this->option('store'), fn ($query, $storeId) => $query->whereKey($storeId))->get();
 
         foreach ($stores as $store) {
             $this->info("Syncing adverts for store: {$store->name}");

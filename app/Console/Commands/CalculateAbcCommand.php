@@ -11,12 +11,12 @@ use Illuminate\Support\Facades\DB;
 
 class CalculateAbcCommand extends Command
 {
-    protected $signature = 'wb:calculate-abc';
+    protected $signature = 'wb:calculate-abc {--store=}';
     protected $description = 'Calculate ABC analysis for products based on 30d revenue';
 
     public function handle()
     {
-        $stores = Store::all();
+        $stores = Store::query()->when($this->option('store'), fn ($query, $storeId) => $query->whereKey($storeId))->get();
         $dateFrom = Carbon::now()->subDays(30);
 
         foreach ($stores as $store) {

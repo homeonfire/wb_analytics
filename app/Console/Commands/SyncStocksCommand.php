@@ -12,12 +12,12 @@ use Carbon\Carbon;
 
 class SyncStocksCommand extends Command
 {
-    protected $signature = 'wb:sync-stocks';
+    protected $signature = 'wb:sync-stocks {--store=}';
     protected $description = 'Sync FBO stocks from WB';
 
     public function handle()
     {
-        $stores = Store::whereNotNull('api_key_standard')->get();
+        $stores = Store::whereNotNull('api_key_standard')->when($this->option('store'), fn ($query, $storeId) => $query->whereKey($storeId))->get();
 
         foreach ($stores as $store) {
             $this->info("Syncing stocks for store: {$store->name}");
@@ -28,6 +28,7 @@ class SyncStocksCommand extends Command
 
             $chunks = array_chunk($nmIds, 1000);
             $allUpsertData = [];
+            $allChunksSuccessful = true;
 
             foreach ($chunks as $chunk) {
                 $retryCount = 0;
@@ -55,6 +56,7 @@ class SyncStocksCommand extends Command
 
                 if (!$success || !$response->successful()) {
                     $this->error("Failed to fetch stocks: " . ($response ? $response->body() : 'No response'));
+                    $allChunksSuccessful = false;
                     continue;
                 }
 
@@ -82,6 +84,11 @@ class SyncStocksCommand extends Command
                 }
 
                 sleep(31);
+            }
+
+            if (!$allChunksSuccessful) {
+                $this->error("Stocks were not changed because at least one API chunk failed.");
+                continue;
             }
 
             // Zero out current stocks before upserting

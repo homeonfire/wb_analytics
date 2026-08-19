@@ -79,7 +79,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/Components/ui/select';
-import { LayoutDashboard, Package, ShoppingCart, BarChart3, TrendingUp, Settings, Users, Store, MapPin } from 'lucide-vue-next';
+import { LayoutDashboard, Package, ShoppingCart, BarChart3, TrendingUp, Settings, Users, Store, MapPin, RefreshCw } from 'lucide-vue-next';
 
 const page = usePage();
 const stores = computed(() => page.props.auth.stores || []);
@@ -117,7 +117,8 @@ const navGroups = computed(() => {
     groups.push({
       title: 'Админ',
       items: [
-        { name: 'План-Факт', route: 'plans.index', icon: TrendingUp }
+        { name: 'План-Факт', route: 'plans.index', icon: TrendingUp },
+        { name: 'Синхронизация', route: 'sync.index', icon: RefreshCw }
       ]
     });
   }

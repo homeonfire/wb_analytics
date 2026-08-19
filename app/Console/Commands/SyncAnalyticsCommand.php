@@ -11,7 +11,7 @@ use Carbon\Carbon;
 
 class SyncAnalyticsCommand extends Command
 {
-    protected $signature = 'wb:sync-analytics {--days=7}';
+    protected $signature = 'wb:sync-analytics {--days=7} {--store=}';
     protected $description = 'Sync sales funnel from WB';
 
     public function handle()
@@ -21,7 +21,7 @@ class SyncAnalyticsCommand extends Command
         $dateFrom = Carbon::now()->subDays($days)->format('Y-m-d');
         $dateTo = Carbon::now()->format('Y-m-d');
 
-        $stores = Store::whereNotNull('api_key_standard')->get();
+        $stores = Store::whereNotNull('api_key_standard')->when($this->option('store'), fn ($query, $storeId) => $query->whereKey($storeId))->get();
 
         foreach ($stores as $store) {
             $this->info("Syncing analytics for store: {$store->name}");

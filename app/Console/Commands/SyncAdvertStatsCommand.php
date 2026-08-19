@@ -11,14 +11,14 @@ use Carbon\Carbon;
 
 class SyncAdvertStatsCommand extends Command
 {
-    protected $signature = 'wb:sync-advert-stats {--days=3}';
+    protected $signature = 'wb:sync-advert-stats {--days=3} {--store=}';
     protected $description = 'Sync advert statistics from WB';
 
     public function handle()
     {
         $days = (int) $this->option('days');
         
-        $stores = Store::whereNotNull('api_key_advert')->get();
+        $stores = Store::whereNotNull('api_key_advert')->when($this->option('store'), fn ($query, $storeId) => $query->whereKey($storeId))->get();
 
         foreach ($stores as $store) {
             $this->info("Syncing advert stats for store: {$store->name}");
