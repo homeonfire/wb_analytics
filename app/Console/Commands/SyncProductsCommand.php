@@ -27,22 +27,16 @@ class SyncProductsCommand extends Command
             
             while (true) {
                 try {
-                    // Try to pass as limit, updatedAt, nmId if array fails. In newer versions it takes settings array or distinct params.
-                    $response = $wb->api->Content()->getCardsList([
-                        'settings' => [
-                            'cursor' => [
-                                'limit' => 100,
-                                'updatedAt' => $updatedAt,
-                                'nmID' => $nmId
-                            ],
-                            'filter' => [
-                                'withPhoto' => -1
-                            ]
-                        ]
-                    ]);
+                    $response = retry(3, fn () => $wb->api->Content()->getCardsList(
+                        textSearch: '',
+                        limit: 100,
+                        updatedAt: $updatedAt,
+                        nmId: $nmId,
+                        withPhoto: -1,
+                    ), 3000);
                 } catch (\Exception $e) {
                     $this->error("API Error: " . $e->getMessage());
-                    break;
+                    return self::FAILURE;
                 }
 
                 // If response is object instead of array depending on wrapper
