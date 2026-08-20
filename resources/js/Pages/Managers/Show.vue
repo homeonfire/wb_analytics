@@ -12,6 +12,7 @@ import { ArrowLeft, Building2, Check, Mail, Package, Save, Search, UserRound } f
 const props = defineProps({ manager: Object, stores: Array, products: Array });
 const storeForm = useForm({ store_ids: props.manager.stores.map(store => store.id) });
 const productForm = useForm({ product_ids: props.manager.products.map(product => product.id) });
+const permissionForm = useForm({ can_run_sync: Boolean(props.manager.can_run_sync) });
 const search = ref('');
 const storeFilter = ref('all');
 
@@ -31,6 +32,7 @@ const toggle = (items, id) => {
 };
 const saveStores = () => storeForm.post(route('managers.stores.bind', props.manager.id), { preserveScroll: true });
 const saveProducts = () => productForm.post(route('managers.bind', props.manager.id), { preserveScroll: true });
+const savePermissions = () => permissionForm.patch(route('managers.permissions.update', props.manager.id), { preserveScroll: true });
 </script>
 
 <template>
@@ -49,6 +51,17 @@ const saveProducts = () => productForm.post(route('managers.bind', props.manager
                     <CardContent class="pt-6">
                         <div class="flex items-center gap-4"><div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10"><UserRound class="h-7 w-7 text-emerald-400" /></div><div><div class="text-lg font-semibold">{{ manager.name }}</div><div class="text-sm text-zinc-500">Менеджер #{{ manager.id }}</div></div></div>
                         <div class="mt-5 grid grid-cols-2 gap-3"><div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3"><div class="text-2xl font-semibold">{{ manager.stores.length }}</div><div class="text-xs text-zinc-500">магазинов</div></div><div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3"><div class="text-2xl font-semibold">{{ productForm.product_ids.length }}</div><div class="text-xs text-zinc-500">товаров</div></div></div>
+                    </CardContent>
+                </Card>
+
+                <Card class="border-zinc-800 text-zinc-100">
+                    <CardHeader><CardTitle class="text-base">Права доступа</CardTitle><CardDescription>Дополнительные возможности менеджера.</CardDescription></CardHeader>
+                    <CardContent>
+                        <label class="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+                            <div><div class="text-sm font-medium">Ручная синхронизация</div><div class="mt-1 text-xs leading-relaxed text-zinc-500">Разрешить запуск команд для назначенных магазинов. Расписания останутся недоступны.</div></div>
+                            <button type="button" class="flex h-5 w-5 shrink-0 items-center justify-center rounded border" :class="permissionForm.can_run_sync ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-zinc-600'" @click="permissionForm.can_run_sync = !permissionForm.can_run_sync"><Check v-if="permissionForm.can_run_sync" class="h-3.5 w-3.5" /></button>
+                        </label>
+                        <Button class="mt-3 w-full bg-emerald-600 text-white hover:bg-emerald-500" :disabled="permissionForm.processing" @click="savePermissions"><Save class="mr-2 h-4 w-4" />Сохранить права</Button>
                     </CardContent>
                 </Card>
 

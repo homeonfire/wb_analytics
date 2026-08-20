@@ -92,6 +92,21 @@ class ManagerController extends Controller
 
         return redirect()->back()->with('success', 'Товары успешно привязаны к менеджеру.');
     }
+    public function updatePermissions(Request $request, User $manager)
+    {
+        abort_unless((bool) $request->user()?->is_super_admin && !$manager->is_super_admin, 403);
+
+        $validated = $request->validate([
+            'can_run_sync' => ['required', 'boolean'],
+        ]);
+
+        $manager->forceFill([
+            'can_run_sync' => $validated['can_run_sync'],
+        ])->save();
+
+        return back()->with('success', 'Права менеджера обновлены.');
+    }
+
     public function bindStores(Request $request, User $manager)
     {
         abort_unless((bool) $request->user()?->is_super_admin && !$manager->is_super_admin, 403);

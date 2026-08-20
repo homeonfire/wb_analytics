@@ -115,6 +115,12 @@ const navGroups = computed(() => {
 
   if (!page.props.auth.user.is_super_admin) {
     groups.splice(2, 1);
+    if (page.props.auth.user.can_run_sync) {
+      groups.push({
+        title: 'Инструменты',
+        items: [{ name: 'Синхронизация', route: 'sync.index', icon: RefreshCw }]
+      });
+    }
   }
 
   if (page.props.auth.user.is_super_admin) {

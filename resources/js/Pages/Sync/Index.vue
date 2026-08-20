@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
 import { CalendarClock, CheckCircle2, CircleOff, Clock3, Play, RefreshCw, Trash2, XCircle } from 'lucide-vue-next';
 
-const props = defineProps({ tasks: Array, runs: Array, schedules: Array });
+const props = defineProps({ tasks: Array, runs: Array, schedules: Array, canManageSchedules: Boolean });
 const taskMap = computed(() => Object.fromEntries(props.tasks.map(task => [task.key, task])));
 const runForm = useForm({ task: 'orders', days: 7 });
 const scheduleForm = useForm({ task: 'orders', frequency: 'hourly', run_at: '03:00', days: 7 });
@@ -63,7 +63,7 @@ onBeforeUnmount(() => window.clearInterval(refreshTimer));
         <Tabs default-value="run" class="mt-6">
             <TabsList class="bg-zinc-900/80 border border-zinc-800">
                 <TabsTrigger value="run">Ручной запуск</TabsTrigger>
-                <TabsTrigger value="schedules">Расписание</TabsTrigger>
+                <TabsTrigger v-if="canManageSchedules" value="schedules">Расписание</TabsTrigger>
                 <TabsTrigger value="history">История</TabsTrigger>
             </TabsList>
 
@@ -83,7 +83,7 @@ onBeforeUnmount(() => window.clearInterval(refreshTimer));
                 </div>
             </TabsContent>
 
-            <TabsContent value="schedules" class="mt-5 space-y-5">
+            <TabsContent v-if="canManageSchedules" value="schedules" class="mt-5 space-y-5">
                 <Card class="glass-panel border-zinc-800 text-zinc-100"><CardHeader><CardTitle>Новое расписание</CardTitle><CardDescription>Время отображается в часовом поясе приложения.</CardDescription></CardHeader><CardContent><form class="grid gap-4 md:grid-cols-4 md:items-end" @submit.prevent="submitSchedule"><div class="space-y-2"><Label>Операция</Label><Select v-model="scheduleForm.task"><SelectTrigger class="border-zinc-700 bg-zinc-900"><SelectValue /></SelectTrigger><SelectContent class="border-zinc-800 bg-zinc-900"><SelectItem v-for="task in tasks" :key="task.key" :value="task.key">{{ task.label }}</SelectItem></SelectContent></Select></div><div class="space-y-2"><Label>Периодичность</Label><Select v-model="scheduleForm.frequency"><SelectTrigger class="border-zinc-700 bg-zinc-900"><SelectValue /></SelectTrigger><SelectContent class="border-zinc-800 bg-zinc-900"><SelectItem value="15_minutes">Каждые 15 минут</SelectItem><SelectItem value="30_minutes">Каждые 30 минут</SelectItem><SelectItem value="hourly">Каждый час</SelectItem><SelectItem value="daily">Ежедневно</SelectItem></SelectContent></Select></div><div v-if="scheduleForm.frequency === 'daily'" class="space-y-2"><Label>Время запуска</Label><Input v-model="scheduleForm.run_at" type="time" class="border-zinc-700 bg-zinc-900" /></div><div v-else-if="selectedScheduleTask?.days" class="space-y-2"><Label>Период, дней</Label><Input v-model="scheduleForm.days" type="number" min="1" :max="selectedScheduleTask.max_days || 90" class="border-zinc-700 bg-zinc-900" /></div><Button type="submit" :disabled="scheduleForm.processing" class="bg-violet-600 text-white hover:bg-violet-500"><CalendarClock class="mr-2 h-4 w-4" />Добавить</Button></form></CardContent></Card>
                 <Card class="border-zinc-800 text-zinc-100"><CardContent class="p-0"><Table><TableHeader><TableRow class="border-zinc-800"><TableHead>Операция</TableHead><TableHead>Периодичность</TableHead><TableHead>Следующий запуск</TableHead><TableHead>Состояние</TableHead><TableHead class="text-right">Действия</TableHead></TableRow></TableHeader><TableBody><TableRow v-for="schedule in schedules" :key="schedule.id" class="border-zinc-800/60"><TableCell class="font-medium text-zinc-200">{{ labelFor(schedule.task) }}</TableCell><TableCell>{{ frequencyLabels[schedule.frequency] }}<span v-if="schedule.frequency === 'daily'">, {{ schedule.run_at?.slice(0,5) }}</span></TableCell><TableCell>{{ dateTime(schedule.next_run_at) }}</TableCell><TableCell><span :class="schedule.is_enabled ? 'text-emerald-400' : 'text-zinc-500'">{{ schedule.is_enabled ? 'Включено' : 'Остановлено' }}</span></TableCell><TableCell class="text-right"><Button variant="ghost" size="sm" @click="toggleSchedule(schedule.id)">{{ schedule.is_enabled ? 'Остановить' : 'Включить' }}</Button><Button variant="ghost" size="sm" class="text-rose-400" @click="deleteSchedule(schedule.id)"><Trash2 class="h-4 w-4" /></Button></TableCell></TableRow><TableRow v-if="!schedules.length"><TableCell colspan="5" class="py-10 text-center text-zinc-500">Расписаний пока нет</TableCell></TableRow></TableBody></Table></CardContent></Card>
             </TabsContent>

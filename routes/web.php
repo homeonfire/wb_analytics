@@ -40,6 +40,7 @@ Route::middleware('auth')->group(function () {
     Route::post('adverts/external', [AdvertController::class, 'storeExternal'])->name('adverts.external.store');
     Route::resource('managers', ManagerController::class)->only(['index', 'show', 'store']);
     Route::post('managers/{manager}/bind', [ManagerController::class, 'bindProducts'])->name('managers.bind');
+    Route::patch('managers/{manager}/permissions', [ManagerController::class, 'updatePermissions'])->name('managers.permissions.update');
     Route::post('managers/{manager}/stores', [ManagerController::class, 'bindStores'])->name('managers.stores.bind');
     Route::resource('plans', PlansController::class)->only(['index', 'show', 'store']);
     Route::get('/sync', [SyncController::class, 'index'])->name('sync.index');
