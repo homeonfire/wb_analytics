@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\ProductAnalytic;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
@@ -18,10 +19,15 @@ class AnalyticsController extends Controller
         }
 
         $days = (int) $request->input('days', 30);
+        $days = in_array($days, [7, 14, 30, 90], true) ? $days : 30;
+        $cacheVersion = Cache::get("analytics:store:{$store->id}:version", 1);
+        $cacheKey = "analytics:store:{$store->id}:days:{$days}:v:{$cacheVersion}";
+        if ($cached = Cache::get($cacheKey)) {
+            return Inertia::render('Analytics/Index', $cached);
+        }
         $periodStart = Carbon::now()->subDays($days);
         
         $prevPeriodStart = Carbon::now()->subDays($days * 2);
-        $prevPeriodEnd = Carbon::now()->subDays($days);
 
         // --- FUNNEL (from ProductAnalytic) ---
         $funnel = ProductAnalytic::where('store_id', $store->id)
@@ -34,43 +40,36 @@ class AnalyticsController extends Controller
             ')
             ->first();
 
-        // --- ACTUAL RECEIPTS (from OrderRaw and SaleRaw) ---
-        $ordersSum = \App\Models\OrderRaw::where('store_id', $store->id)
-            ->where('order_date', '>=', $periodStart)
+        // --- ACTUAL RECEIPTS (one aggregate per source for both periods) ---
+        $ordersAggregate = \App\Models\OrderRaw::where('store_id', $store->id)
+            ->where('order_date', '>=', $prevPeriodStart)
             ->where('is_cancel', false)
-            ->sum('finished_price');
-            
-        $ordersCount = \App\Models\OrderRaw::where('store_id', $store->id)
-            ->where('order_date', '>=', $periodStart)
-            ->where('is_cancel', false)
-            ->count();
-            
-        $salesSum = \App\Models\SaleRaw::where('store_id', $store->id)
-            ->where('sale_date', '>=', $periodStart)
-            ->sum('finished_price');
-            
-        $salesCount = \App\Models\SaleRaw::where('store_id', $store->id)
-            ->where('sale_date', '>=', $periodStart)
-            ->count();
+            ->selectRaw('
+                COALESCE(SUM(finished_price) FILTER (WHERE order_date >= ?), 0) as current_sum,
+                COUNT(*) FILTER (WHERE order_date >= ?) as current_count,
+                COALESCE(SUM(finished_price) FILTER (WHERE order_date >= ? AND order_date < ?), 0) as previous_sum,
+                COUNT(*) FILTER (WHERE order_date >= ? AND order_date < ?) as previous_count
+            ', [$periodStart, $periodStart, $prevPeriodStart, $periodStart, $prevPeriodStart, $periodStart])
+            ->first();
 
-        // Previous Period (for LFL)
-        $prevOrdersSum = \App\Models\OrderRaw::where('store_id', $store->id)
-            ->whereBetween('order_date', [$prevPeriodStart, $prevPeriodEnd])
-            ->where('is_cancel', false)
-            ->sum('finished_price');
-            
-        $prevSalesSum = \App\Models\SaleRaw::where('store_id', $store->id)
-            ->whereBetween('sale_date', [$prevPeriodStart, $prevPeriodEnd])
-            ->sum('finished_price');
-            
-        $prevOrdersCount = \App\Models\OrderRaw::where('store_id', $store->id)
-            ->whereBetween('order_date', [$prevPeriodStart, $prevPeriodEnd])
-            ->where('is_cancel', false)
-            ->count();
+        $salesAggregate = \App\Models\SaleRaw::where('store_id', $store->id)
+            ->where('sale_date', '>=', $prevPeriodStart)
+            ->selectRaw('
+                COALESCE(SUM(finished_price) FILTER (WHERE sale_date >= ?), 0) as current_sum,
+                COUNT(*) FILTER (WHERE sale_date >= ? AND finished_price > 0) as current_count,
+                COALESCE(SUM(finished_price) FILTER (WHERE sale_date >= ? AND sale_date < ?), 0) as previous_sum,
+                COUNT(*) FILTER (WHERE sale_date >= ? AND sale_date < ? AND finished_price > 0) as previous_count
+            ', [$periodStart, $periodStart, $prevPeriodStart, $periodStart, $prevPeriodStart, $periodStart])
+            ->first();
 
-        $prevSalesCount = \App\Models\SaleRaw::where('store_id', $store->id)
-            ->whereBetween('sale_date', [$prevPeriodStart, $prevPeriodEnd])
-            ->count();
+        $ordersSum = (float) $ordersAggregate->current_sum;
+        $ordersCount = (int) $ordersAggregate->current_count;
+        $prevOrdersSum = (float) $ordersAggregate->previous_sum;
+        $prevOrdersCount = (int) $ordersAggregate->previous_count;
+        $salesSum = (float) $salesAggregate->current_sum;
+        $salesCount = (int) $salesAggregate->current_count;
+        $prevSalesSum = (float) $salesAggregate->previous_sum;
+        $prevSalesCount = (int) $salesAggregate->previous_count;
 
         $calcLfl = function($curr, $prev) {
             if ($prev == 0) return $curr > 0 ? 100 : 0;
@@ -116,6 +115,7 @@ class AnalyticsController extends Controller
 
         $salesTrend = \App\Models\SaleRaw::where('store_id', $store->id)
             ->where('sale_date', '>=', $periodStart)
+            ->where('finished_price', '>', 0)
             ->select(DB::raw('DATE(sale_date) as date'), DB::raw('COUNT(id) as buyouts_count'))
             ->groupBy(DB::raw('DATE(sale_date)'))
             ->get()->keyBy('date');
@@ -228,13 +228,16 @@ class AnalyticsController extends Controller
             return $item;
         });
 
-        return Inertia::render('Analytics/Index', [
+        $payload = [
             'kpis' => $kpis,
             'trend' => $trend,
             'topProducts' => $topProducts,
             'warehouses' => $warehouses,
             'antiTop' => $antiTop,
             'days' => $days
-        ]);
+        ];
+        Cache::put($cacheKey, $payload, now()->addMinutes(5));
+
+        return Inertia::render('Analytics/Index', $payload);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductPlan;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class ProductController extends Controller
@@ -140,6 +141,8 @@ class ProductController extends Controller
             ['product_id' => $product->id, 'year' => $period->year, 'month' => $period->month],
             $validated,
         );
+
+        Cache::put("analytics:store:{$store->id}:version", now()->getTimestampMs(), now()->addYear());
 
         return back()->with('success', 'План на текущий месяц сохранён.');
     }

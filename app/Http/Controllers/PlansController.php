@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use App\Models\Product;
 use App\Models\ProductPlan;
@@ -91,6 +92,8 @@ class PlansController extends Controller
                 ]
             );
         }
+
+        Cache::put("analytics:store:{$store->id}:version", now()->getTimestampMs(), now()->addYear());
 
         return redirect()->back()->with('success', 'Планы успешно сохранены');
     }

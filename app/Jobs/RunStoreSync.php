@@ -10,6 +10,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use RuntimeException;
 use Throwable;
 
@@ -49,6 +50,7 @@ class RunStoreSync implements ShouldQueue
                 if ($exitCode !== 0) throw new RuntimeException("Команда {$definition['command']} завершилась с кодом {$exitCode}");
             }
             $run->update(['status' => 'completed', 'output' => implode("\n\n", $output), 'finished_at' => now()]);
+            Cache::put("analytics:store:{$run->store_id}:version", now()->getTimestampMs(), now()->addYear());
         } catch (Throwable $exception) {
             $run->update(['status' => 'failed', 'output' => isset($output) ? implode("\n\n", $output) : null, 'error' => mb_substr($exception->getMessage(), 0, 10000), 'finished_at' => now()]);
             throw $exception;
