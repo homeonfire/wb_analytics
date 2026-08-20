@@ -323,7 +323,7 @@ const getFunnelWidth = (val) => `${(val / funnelMax) * 100}%`;
                                     <th class="px-6 py-4 font-medium">Товар</th>
                                     <th class="px-6 py-4 font-medium text-center">Выручка</th>
                                     <th class="px-6 py-4 font-medium text-center">Остаток</th>
-                                    <th class="px-6 py-4 font-medium text-center">Хватит на</th>
+                                    <th class="min-w-[110px] whitespace-nowrap px-6 py-4 text-center font-medium">Хватит на</th>
                                     <th class="px-6 py-4 font-medium">План / Факт (Текущий месяц)</th>
                                 </tr>
                             </thead>
@@ -345,17 +345,17 @@ const getFunnelWidth = (val) => `${(val / funnelMax) * 100}%`;
                                     <td class="px-6 py-4 text-center text-zinc-300">
                                         {{ formatNumber(product.total_stock) }} шт
                                     </td>
-                                    <td class="px-6 py-4 text-center">
-                                        <span v-if="product.days_of_supply <= 7" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400">
+                                    <td class="whitespace-nowrap px-6 py-4 text-center">
+                                        <span v-if="product.days_of_supply <= 7" class="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400">
                                             {{ product.days_of_supply }} дн.
                                         </span>
-                                        <span v-else-if="product.days_of_supply <= 30" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400">
+                                        <span v-else-if="product.days_of_supply <= 30" class="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400">
                                             {{ product.days_of_supply }} дн.
                                         </span>
-                                        <span v-else-if="product.days_of_supply < 999" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400">
+                                        <span v-else-if="product.days_of_supply < 999" class="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400">
                                             {{ product.days_of_supply }} дн.
                                         </span>
-                                        <span v-else class="text-zinc-500 text-xs">Много</span>
+                                        <span v-else class="inline-flex whitespace-nowrap text-zinc-500 text-xs">Много</span>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div v-if="product.plan_orders > 0 || product.plan_sales > 0" class="space-y-3 min-w-[200px]">
