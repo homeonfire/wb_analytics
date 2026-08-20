@@ -57,7 +57,7 @@ class StoreController extends Controller
         $storeId = $request->store_id;
         $user = $request->user();
 
-        if ($user->stores()->where('stores.id', $storeId)->exists()) {
+        if ($user->is_super_admin || $user->stores()->where('stores.id', $storeId)->exists()) {
             session(['current_store_id' => $storeId]);
         }
 

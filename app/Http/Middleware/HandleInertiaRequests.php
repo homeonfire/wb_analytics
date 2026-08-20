@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Store;
+
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -33,7 +35,11 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $request->user(),
-                'stores' => $request->user() ? $request->user()->stores()->get() : [],
+                'stores' => $request->user()
+                    ? ($request->user()->is_super_admin
+                        ? Store::orderBy('name')->get()
+                        : $request->user()->stores()->orderBy('name')->get())
+                    : [],
                 'current_store' => app()->bound('current_store') ? app('current_store') : null,
             ],
         ];

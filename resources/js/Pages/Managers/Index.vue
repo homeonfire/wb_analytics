@@ -8,7 +8,7 @@ import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
-import { Users, Plus, Link as LinkIcon, Search, ArrowRight } from 'lucide-vue-next';
+import { Users, Plus, Search, ArrowRight, Check, ShieldCheck } from 'lucide-vue-next';
 
 const props = defineProps({
     managers: Array,
@@ -23,6 +23,7 @@ const createForm = useForm({
     name: '',
     email: '',
     password: '',
+    is_super_admin: false,
 });
 
 const bindForm = useForm({
@@ -90,11 +91,11 @@ const submitBind = () => {
             <div class="flex items-center justify-between w-full">
                 <h2 class="font-semibold text-2xl tracking-tight text-white animate-fade-in flex items-center">
                     <Users class="w-6 h-6 mr-3 text-emerald-400" />
-                    Менеджеры
+                    Пользователи
                 </h2>
                 <Button @click="openCreateModal" class="bg-emerald-600 hover:bg-emerald-700 text-white border-none shadow-lg shadow-emerald-900/20">
                     <Plus class="w-4 h-4 mr-2" />
-                    Добавить менеджера
+                    Добавить пользователя
                 </Button>
             </div>
         </template>
@@ -108,6 +109,7 @@ const submitBind = () => {
                                 <TableHead class="text-zinc-400 py-4 pl-6">ID</TableHead>
                                 <TableHead class="text-zinc-400 py-4">Имя</TableHead>
                                 <TableHead class="text-zinc-400 py-4">Email</TableHead>
+                                <TableHead class="text-zinc-400 py-4">Роль</TableHead>
                                 <TableHead class="text-zinc-400 py-4 text-center">Привязано товаров</TableHead>
                                 <TableHead class="text-zinc-400 py-4 text-right pr-6">Действия</TableHead>
                             </TableRow>
@@ -124,6 +126,10 @@ const submitBind = () => {
                                     </div>
                                 </TableCell>
                                 <TableCell class="text-zinc-400 py-4">{{ manager.email }}</TableCell>
+                                <TableCell class="py-4">
+                                    <span v-if="manager.is_super_admin" class="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-300"><ShieldCheck class="h-3.5 w-3.5" />Супер-админ</span>
+                                    <span v-else class="inline-flex rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-xs font-medium text-zinc-400">Менеджер</span>
+                                </TableCell>
                                 <TableCell class="text-center py-4">
                                     <span class="inline-flex items-center justify-center bg-zinc-900 border border-zinc-700 px-3 py-1 rounded-full text-sm font-semibold text-zinc-300">
                                         {{ manager.products_count || 0 }}
@@ -138,8 +144,8 @@ const submitBind = () => {
                             </TableRow>
                             
                             <TableRow v-if="managers.length === 0">
-                                <TableCell colspan="5" class="text-center text-zinc-500 py-12">
-                                    Менеджеров пока нет. Добавьте первого!
+                                <TableCell colspan="6" class="text-center text-zinc-500 py-12">
+                                    Пользователей пока нет. Добавьте первого!
                                 </TableCell>
                             </TableRow>
                         </TableBody>
@@ -152,7 +158,7 @@ const submitBind = () => {
         <Dialog :open="isCreateModalOpen" @update:open="val => isCreateModalOpen = val">
             <DialogContent class="bg-zinc-950 border-zinc-800 text-zinc-100 sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Добавление менеджера</DialogTitle>
+                    <DialogTitle>Добавление пользователя</DialogTitle>
                     <DialogDescription class="text-zinc-500">
                         Создайте новый аккаунт для сотрудника, задав ему email и пароль.
                     </DialogDescription>
@@ -176,6 +182,12 @@ const submitBind = () => {
                         <Input id="password" v-model="createForm.password" type="password" placeholder="Минимум 8 символов" class="bg-zinc-900 border-zinc-800 focus-visible:ring-emerald-500 text-white" required />
                         <div v-if="createForm.errors.password" class="text-rose-500 text-xs">{{ createForm.errors.password }}</div>
                     </div>
+
+                    <label class="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
+                        <div><div class="flex items-center gap-2 text-sm font-medium"><ShieldCheck class="h-4 w-4 text-amber-400" />Супер-администратор</div><div class="mt-1 text-xs leading-relaxed text-zinc-500">Полный доступ ко всем разделам и магазинам.</div></div>
+                        <button type="button" class="flex h-5 w-5 shrink-0 items-center justify-center rounded border" :class="createForm.is_super_admin ? 'border-amber-500 bg-amber-500 text-white' : 'border-zinc-600'" @click="createForm.is_super_admin = !createForm.is_super_admin"><Check v-if="createForm.is_super_admin" class="h-3.5 w-3.5" /></button>
+                    </label>
+                    <div v-if="createForm.errors.is_super_admin" class="text-rose-500 text-xs">{{ createForm.errors.is_super_admin }}</div>
                     
                     <DialogFooter class="pt-4">
                         <Button type="button" variant="outline" @click="isCreateModalOpen = false" class="border-zinc-700 text-zinc-300 hover:bg-zinc-800">

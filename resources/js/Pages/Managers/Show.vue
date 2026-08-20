@@ -7,12 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/Com
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select';
-import { ArrowLeft, Building2, Check, Mail, Package, Save, Search, UserRound } from 'lucide-vue-next';
+import { ArrowLeft, Building2, Check, Mail, Package, Save, Search, ShieldCheck, UserRound } from 'lucide-vue-next';
 
 const props = defineProps({ manager: Object, stores: Array, products: Array });
 const storeForm = useForm({ store_ids: props.manager.stores.map(store => store.id) });
 const productForm = useForm({ product_ids: props.manager.products.map(product => product.id) });
-const permissionForm = useForm({ can_run_sync: Boolean(props.manager.can_run_sync) });
+const permissionForm = useForm({
+    is_super_admin: Boolean(props.manager.is_super_admin),
+    can_run_sync: Boolean(props.manager.can_run_sync),
+});
 const search = ref('');
 const storeFilter = ref('all');
 
@@ -49,23 +52,28 @@ const savePermissions = () => permissionForm.patch(route('managers.permissions.u
             <div class="space-y-6">
                 <Card class="glass-panel border-zinc-800 text-zinc-100">
                     <CardContent class="pt-6">
-                        <div class="flex items-center gap-4"><div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10"><UserRound class="h-7 w-7 text-emerald-400" /></div><div><div class="text-lg font-semibold">{{ manager.name }}</div><div class="text-sm text-zinc-500">Менеджер #{{ manager.id }}</div></div></div>
+                        <div class="flex items-center gap-4"><div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10"><UserRound class="h-7 w-7 text-emerald-400" /></div><div><div class="text-lg font-semibold">{{ manager.name }}</div><div class="text-sm text-zinc-500">{{ manager.is_super_admin ? 'Супер-администратор' : 'Менеджер' }} #{{ manager.id }}</div></div></div>
                         <div class="mt-5 grid grid-cols-2 gap-3"><div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3"><div class="text-2xl font-semibold">{{ manager.stores.length }}</div><div class="text-xs text-zinc-500">магазинов</div></div><div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3"><div class="text-2xl font-semibold">{{ productForm.product_ids.length }}</div><div class="text-xs text-zinc-500">товаров</div></div></div>
                     </CardContent>
                 </Card>
 
                 <Card class="border-zinc-800 text-zinc-100">
-                    <CardHeader><CardTitle class="text-base">Права доступа</CardTitle><CardDescription>Дополнительные возможности менеджера.</CardDescription></CardHeader>
-                    <CardContent>
-                        <label class="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+                    <CardHeader><CardTitle class="text-base">Роль и права доступа</CardTitle><CardDescription>Роль определяет доступ пользователя к разделам и магазинам.</CardDescription></CardHeader>
+                    <CardContent class="space-y-3">
+                        <label class="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+                            <div><div class="flex items-center gap-2 text-sm font-medium"><ShieldCheck class="h-4 w-4 text-amber-400" />Супер-администратор</div><div class="mt-1 text-xs leading-relaxed text-zinc-500">Полный доступ ко всем разделам и всем магазинам без отдельных привязок.</div></div>
+                            <button type="button" class="flex h-5 w-5 shrink-0 items-center justify-center rounded border" :class="permissionForm.is_super_admin ? 'border-amber-500 bg-amber-500 text-white' : 'border-zinc-600'" @click="permissionForm.is_super_admin = !permissionForm.is_super_admin"><Check v-if="permissionForm.is_super_admin" class="h-3.5 w-3.5" /></button>
+                        </label>
+                        <label v-if="!permissionForm.is_super_admin" class="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
                             <div><div class="text-sm font-medium">Ручная синхронизация</div><div class="mt-1 text-xs leading-relaxed text-zinc-500">Разрешить запуск команд для назначенных магазинов. Расписания останутся недоступны.</div></div>
                             <button type="button" class="flex h-5 w-5 shrink-0 items-center justify-center rounded border" :class="permissionForm.can_run_sync ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-zinc-600'" @click="permissionForm.can_run_sync = !permissionForm.can_run_sync"><Check v-if="permissionForm.can_run_sync" class="h-3.5 w-3.5" /></button>
                         </label>
-                        <Button class="mt-3 w-full bg-emerald-600 text-white hover:bg-emerald-500" :disabled="permissionForm.processing" @click="savePermissions"><Save class="mr-2 h-4 w-4" />Сохранить права</Button>
+                        <div v-else class="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 text-xs leading-relaxed text-zinc-500">Супер-администратору ручная синхронизация доступна автоматически.</div>
+                        <Button class="w-full bg-emerald-600 text-white hover:bg-emerald-500" :disabled="permissionForm.processing" @click="savePermissions"><Save class="mr-2 h-4 w-4" />Сохранить роль и права</Button>
                     </CardContent>
                 </Card>
 
-                <Card class="border-zinc-800 text-zinc-100">
+                <Card v-if="!permissionForm.is_super_admin" class="border-zinc-800 text-zinc-100">
                     <CardHeader><CardTitle class="flex items-center gap-2 text-base"><Building2 class="h-4 w-4 text-blue-400" />Доступ к магазинам</CardTitle><CardDescription>Менеджер сможет переключаться только между выбранными магазинами.</CardDescription></CardHeader>
                     <CardContent class="space-y-2">
                         <label v-for="store in stores" :key="store.id" class="flex cursor-pointer items-center justify-between rounded-lg border p-3 transition" :class="storeForm.store_ids.includes(store.id) ? 'border-blue-500/30 bg-blue-500/10' : 'border-zinc-800 bg-zinc-900/40 hover:bg-zinc-800/60'">
@@ -77,7 +85,7 @@ const savePermissions = () => permissionForm.patch(route('managers.permissions.u
                 </Card>
             </div>
 
-            <Card class="border-zinc-800 text-zinc-100">
+            <Card v-if="!permissionForm.is_super_admin" class="border-zinc-800 text-zinc-100">
                 <CardHeader><div class="flex items-start justify-between gap-4"><div><CardTitle class="flex items-center gap-2"><Package class="h-5 w-5 text-violet-400" />Привязанные товары</CardTitle><CardDescription class="mt-1">Доступны товары только из назначенных выше магазинов.</CardDescription></div><Button class="bg-violet-600 text-white hover:bg-violet-500" :disabled="productForm.processing" @click="saveProducts"><Save class="mr-2 h-4 w-4" />Сохранить товары</Button></div></CardHeader>
                 <CardContent>
                     <div v-if="!manager.stores.length" class="rounded-xl border border-dashed border-zinc-700 px-6 py-14 text-center"><Building2 class="mx-auto h-8 w-8 text-zinc-600" /><p class="mt-3 text-zinc-400">Сначала назначьте менеджеру хотя бы один магазин</p></div>
@@ -94,6 +102,9 @@ const savePermissions = () => permissionForm.patch(route('managers.permissions.u
                         <div v-if="productForm.errors.product_ids" class="mt-3 text-xs text-rose-400">{{ productForm.errors.product_ids }}</div>
                     </template>
                 </CardContent>
+            </Card>
+            <Card v-else class="border-zinc-800 text-zinc-100">
+                <CardContent class="flex min-h-[260px] flex-col items-center justify-center p-8 text-center"><ShieldCheck class="h-12 w-12 text-amber-400" /><h3 class="mt-4 text-lg font-semibold">Полный доступ</h3><p class="mt-2 max-w-md text-sm leading-relaxed text-zinc-500">Супер-администратор видит все магазины и товары. Отдельные привязки для этой роли не требуются.</p></CardContent>
             </Card>
         </div>
     </AuthenticatedLayout>
