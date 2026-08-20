@@ -113,6 +113,10 @@ const navGroups = computed(() => {
     }
   ];
 
+  if (!page.props.auth.user.is_super_admin) {
+    groups.splice(2, 1);
+  }
+
   if (page.props.auth.user.is_super_admin) {
     groups.push({
       title: 'Админ',

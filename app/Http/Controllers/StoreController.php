@@ -11,6 +11,7 @@ class StoreController extends Controller
 {
     public function index(Request $request)
     {
+        abort_unless((bool) $request->user()?->is_super_admin, 403);
         $stores = Store::orderBy('id', 'desc')->get();
         return Inertia::render('Stores/Index', [
             'stores' => $stores
@@ -19,6 +20,7 @@ class StoreController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless((bool) $request->user()?->is_super_admin, 403);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'api_key_standard' => 'nullable|string',
@@ -38,6 +40,7 @@ class StoreController extends Controller
 
     public function destroy(Store $store)
     {
+        abort_unless((bool) request()->user()?->is_super_admin, 403);
         // Возможно, стоит отвязывать товары или удалять каскадно
         // Для простоты пока просто удаляем магазин (товары могут остаться сиротами или удалятся каскадно, если настроен foreign key CASCADE)
         $store->delete();

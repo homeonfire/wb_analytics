@@ -38,9 +38,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('analytics', AnalyticsController::class)->only(['index']);
     Route::resource('adverts', AdvertController::class)->only(['index']);
     Route::post('adverts/external', [AdvertController::class, 'storeExternal'])->name('adverts.external.store');
-    Route::resource('managers', ManagerController::class)->only(['index', 'store']);
+    Route::resource('managers', ManagerController::class)->only(['index', 'show', 'store']);
     Route::post('managers/{manager}/bind', [ManagerController::class, 'bindProducts'])->name('managers.bind');
-    Route::resource('plans', PlansController::class)->only(['index', 'store']);
+    Route::post('managers/{manager}/stores', [ManagerController::class, 'bindStores'])->name('managers.stores.bind');
+    Route::resource('plans', PlansController::class)->only(['index', 'show', 'store']);
     Route::get('/sync', [SyncController::class, 'index'])->name('sync.index');
     Route::post('/sync/run', [SyncController::class, 'run'])->name('sync.run');
     Route::post('/sync/schedules', [SyncController::class, 'schedule'])->name('sync.schedules.store');

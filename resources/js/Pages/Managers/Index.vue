@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Head, useForm, router } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent } from '@/Components/ui/card';
@@ -8,7 +8,7 @@ import { Button } from '@/Components/ui/button';
 import { Input } from '@/Components/ui/input';
 import { Label } from '@/Components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
-import { Users, Plus, ShieldCheck, Link as LinkIcon, Search } from 'lucide-vue-next';
+import { Users, Plus, Link as LinkIcon, Search, ArrowRight } from 'lucide-vue-next';
 
 const props = defineProps({
     managers: Array,
@@ -130,10 +130,10 @@ const submitBind = () => {
                                     </span>
                                 </TableCell>
                                 <TableCell class="text-right pr-6 py-4">
-                                    <Button variant="outline" size="sm" @click="openBindModal(manager)" class="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800">
-                                        <LinkIcon class="w-4 h-4 mr-2 text-blue-400" />
-                                        Привязка товаров
-                                    </Button>
+                                    <Link :href="route('managers.show', manager.id)" class="inline-flex items-center rounded-md border border-zinc-700 px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800 hover:text-white">
+                                        Открыть
+                                        <ArrowRight class="ml-2 h-4 w-4 text-blue-400" />
+                                    </Link>
                                 </TableCell>
                             </TableRow>
                             
