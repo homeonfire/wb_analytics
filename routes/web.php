@@ -33,6 +33,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/stores/switch', [StoreController::class, 'switch'])->name('stores.switch');
     Route::resource('stores', StoreController::class)->only(['index', 'store', 'destroy']);
     Route::resource('products', ProductController::class)->only(['index', 'show']);
+    Route::patch('products/{product}/plan', [ProductController::class, 'updatePlan'])->name('products.plan.update');
     Route::resource('orders', OrderController::class)->only(['index']);
     Route::get('/logistics', [LogisticsController::class, 'index'])->name('logistics.index');
     Route::resource('analytics', AnalyticsController::class)->only(['index']);

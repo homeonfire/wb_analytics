@@ -15,6 +15,7 @@ const productForm = useForm({ product_ids: props.manager.products.map(product =>
 const permissionForm = useForm({
     is_super_admin: Boolean(props.manager.is_super_admin),
     can_run_sync: Boolean(props.manager.can_run_sync),
+    can_manage_plans: Boolean(props.manager.can_manage_plans),
 });
 const search = ref('');
 const storeFilter = ref('all');
@@ -69,6 +70,10 @@ const savePermissions = () => permissionForm.patch(route('managers.permissions.u
                             <button type="button" class="flex h-5 w-5 shrink-0 items-center justify-center rounded border" :class="permissionForm.can_run_sync ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-zinc-600'" @click="permissionForm.can_run_sync = !permissionForm.can_run_sync"><Check v-if="permissionForm.can_run_sync" class="h-3.5 w-3.5" /></button>
                         </label>
                         <div v-else class="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3 text-xs leading-relaxed text-zinc-500">Супер-администратору ручная синхронизация доступна автоматически.</div>
+                        <label v-if="!permissionForm.is_super_admin" class="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+                            <div><div class="text-sm font-medium">Управление план-фактом</div><div class="mt-1 text-xs leading-relaxed text-zinc-500">Разрешить назначать планы в карточках доступных менеджеру товаров.</div></div>
+                            <button type="button" class="flex h-5 w-5 shrink-0 items-center justify-center rounded border" :class="permissionForm.can_manage_plans ? 'border-violet-500 bg-violet-500 text-white' : 'border-zinc-600'" @click="permissionForm.can_manage_plans = !permissionForm.can_manage_plans"><Check v-if="permissionForm.can_manage_plans" class="h-3.5 w-3.5" /></button>
+                        </label>
                         <Button class="w-full bg-emerald-600 text-white hover:bg-emerald-500" :disabled="permissionForm.processing" @click="savePermissions"><Save class="mr-2 h-4 w-4" />Сохранить роль и права</Button>
                     </CardContent>
                 </Card>

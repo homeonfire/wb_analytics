@@ -115,12 +115,10 @@ const navGroups = computed(() => {
 
   if (!page.props.auth.user.is_super_admin) {
     groups.splice(2, 1);
-    if (page.props.auth.user.can_run_sync) {
-      groups.push({
-        title: 'Инструменты',
-        items: [{ name: 'Синхронизация', route: 'sync.index', icon: RefreshCw }]
-      });
-    }
+    const tools = [];
+    if (page.props.auth.user.can_manage_plans) tools.push({ name: 'План-Факт', route: 'plans.index', icon: TrendingUp });
+    if (page.props.auth.user.can_run_sync) tools.push({ name: 'Синхронизация', route: 'sync.index', icon: RefreshCw });
+    if (tools.length) groups.push({ title: 'Инструменты', items: tools });
   }
 
   if (page.props.auth.user.is_super_admin) {

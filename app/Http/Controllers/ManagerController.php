@@ -89,10 +89,12 @@ class ManagerController extends Controller
         $validated = $request->validate([
             'is_super_admin' => ['required', 'boolean'],
             'can_run_sync' => ['required', 'boolean'],
+            'can_manage_plans' => ['required', 'boolean'],
         ]);
         $manager->forceFill([
             'is_super_admin' => $validated['is_super_admin'],
             'can_run_sync' => $validated['is_super_admin'] ? false : $validated['can_run_sync'],
+            'can_manage_plans' => $validated['is_super_admin'] ? false : $validated['can_manage_plans'],
         ])->save();
 
         return back()->with('success', 'Роль и права пользователя обновлены.');

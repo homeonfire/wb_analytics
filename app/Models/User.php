@@ -22,6 +22,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
             'can_run_sync' => 'boolean',
+            'can_manage_plans' => 'boolean',
         ];
     }
 

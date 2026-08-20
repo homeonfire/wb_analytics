@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
+use App\Models\ProductPlan;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Models\Product;
 
 class ProductController extends Controller
 {
@@ -51,7 +53,7 @@ class ProductController extends Controller
         ]);
     }
 
-    public function show(Product $product)
+    public function show(Request $request, Product $product)
     {
         $store = app('current_store') ?? null;
         if (!$store || $product->store_id !== $store->id) {
@@ -79,6 +81,34 @@ class ProductController extends Controller
             ->groupByRaw('DATE(sale_date)')
             ->get();
 
+        $periods = collect([now()->subMonthNoOverflow()->startOfMonth(), now()->startOfMonth()])
+            ->map(function (Carbon $period) use ($product, $store) {
+                $end = $period->copy()->endOfMonth();
+                $plan = ProductPlan::where('product_id', $product->id)
+                    ->where('year', $period->year)
+                    ->where('month', $period->month)
+                    ->first();
+                $ordersFact = \App\Models\OrderRaw::where('store_id', $store->id)
+                    ->where('nm_id', $product->nm_id)
+                    ->whereBetween('order_date', [$period, $end])
+                    ->count();
+                $salesFact = \App\Models\SaleRaw::where('store_id', $store->id)
+                    ->where('nm_id', $product->nm_id)
+                    ->whereBetween('sale_date', [$period, $end])
+                    ->count();
+
+                return [
+                    'year' => $period->year,
+                    'month' => $period->month,
+                    'label' => $period->copy()->locale('ru')->translatedFormat('F Y'),
+                    'orders_plan' => (int) ($plan?->orders_plan ?? 0),
+                    'sales_plan' => (int) ($plan?->sales_plan ?? 0),
+                    'orders_fact' => $ordersFact,
+                    'sales_fact' => $salesFact,
+                    'has_plan' => (bool) $plan,
+                ];
+            })->values();
+
         $campaigns = \App\Models\AdvertCampaign::where('store_id', $store->id)
             ->where('nm_id', $product->nm_id)
             ->orderBy('id', 'desc')
@@ -89,7 +119,28 @@ class ProductController extends Controller
             'analytics' => $analytics,
             'ordersFact' => $orders_fact,
             'salesFact' => $sales_fact,
-            'campaigns' => $campaigns
+            'campaigns' => $campaigns,
+            'planFactPeriods' => $periods,
+            'canManagePlans' => (bool) ($request->user()->is_super_admin || $request->user()->can_manage_plans),
         ]);
+    }
+
+    public function updatePlan(Request $request, Product $product)
+    {
+        $store = app('current_store');
+        abort_unless($store && $product->store_id === $store->id, 403);
+        abort_unless((bool) ($request->user()->is_super_admin || $request->user()->can_manage_plans), 403);
+
+        $validated = $request->validate([
+            'orders_plan' => ['required', 'integer', 'min:0'],
+            'sales_plan' => ['required', 'integer', 'min:0'],
+        ]);
+        $period = now();
+        ProductPlan::updateOrCreate(
+            ['product_id' => $product->id, 'year' => $period->year, 'month' => $period->month],
+            $validated,
+        );
+
+        return back()->with('success', 'План на текущий месяц сохранён.');
     }
 }

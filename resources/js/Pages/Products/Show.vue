@@ -1,13 +1,13 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { Card, CardHeader, CardTitle, CardContent } from '@/Components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
 import { Button } from '@/Components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/Components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/Components/ui/accordion';
 import { computed, ref, defineComponent, onMounted, watch } from 'vue';
-import { ArrowLeft, Package, TrendingUp, DollarSign, Megaphone, BarChart3, List, CalendarDays, ExternalLink, Calculator } from 'lucide-vue-next';
+import { ArrowLeft, Package, TrendingUp, DollarSign, Megaphone, BarChart3, List, CalendarDays, ExternalLink, Calculator, Target, Save, ShieldCheck } from 'lucide-vue-next';
 import { Input } from '@/Components/ui/input';
 import VueApexCharts from "vue3-apexcharts";
 
@@ -26,8 +26,19 @@ const props = defineProps({
     analytics: Array,
     ordersFact: Array,
     salesFact: Array,
-    campaigns: Array
+    campaigns: Array,
+    planFactPeriods: Array,
+    canManagePlans: Boolean
 });
+
+const currentPlanPeriod = props.planFactPeriods?.[props.planFactPeriods.length - 1] || {};
+const planForm = useForm({
+    orders_plan: currentPlanPeriod.orders_plan || 0,
+    sales_plan: currentPlanPeriod.sales_plan || 0,
+});
+const planPercent = (fact, plan) => Number(plan) > 0 ? Math.round((Number(fact) / Number(plan)) * 100) : 0;
+const progressWidth = (fact, plan) => Math.min(100, planPercent(fact, plan)) + '%';
+const savePlan = () => planForm.patch(route('products.plan.update', props.product.id), { preserveScroll: true });
 
 const totalStocks = computed(() => {
     if (!props.product.warehouse_stocks) return 0;
@@ -322,9 +333,35 @@ const calcResults = computed(() => {
                         <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-100 pointer-events-none"></div>
                         <div class="absolute -right-3 -bottom-3 opacity-[0.03]"><DollarSign class="w-12 h-12 text-emerald-500" /></div>
                     </Card>
+
                 </div>
 
-                <!-- Stocks & Campaigns (Side by side) -->
+                <Card class="glass-panel overflow-hidden border-violet-500/20 text-zinc-100">
+                    <CardHeader class="border-b border-zinc-800/60 bg-gradient-to-r from-violet-500/10 to-transparent">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div><CardTitle class="flex items-center gap-2"><Target class="h-5 w-5 text-violet-400" />План-факт товара</CardTitle><p class="mt-1 text-sm text-zinc-500">Выполнение целей за текущий и предыдущий месяц</p></div>
+                            <span class="inline-flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs" :class="canManagePlans ? 'border-violet-500/30 bg-violet-500/10 text-violet-300' : 'border-zinc-700 bg-zinc-900 text-zinc-400'"><ShieldCheck class="h-3.5 w-3.5" />{{ canManagePlans ? 'Можно редактировать' : 'Только просмотр' }}</span>
+                        </div>
+                    </CardHeader>
+                    <CardContent class="space-y-5 p-5">
+                        <form v-if="canManagePlans" class="grid gap-3 rounded-xl border border-violet-500/20 bg-violet-500/5 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end" @submit.prevent="savePlan">
+                            <div class="space-y-1.5"><label class="text-xs font-medium text-zinc-400">План заказов на текущий месяц</label><Input v-model="planForm.orders_plan" type="number" min="0" class="border-zinc-700 bg-zinc-950 text-white focus-visible:ring-violet-500" /></div>
+                            <div class="space-y-1.5"><label class="text-xs font-medium text-zinc-400">План выкупов на текущий месяц</label><Input v-model="planForm.sales_plan" type="number" min="0" class="border-zinc-700 bg-zinc-950 text-white focus-visible:ring-violet-500" /></div>
+                            <Button type="submit" :disabled="planForm.processing" class="bg-violet-600 text-white hover:bg-violet-500"><Save class="mr-2 h-4 w-4" />Сохранить</Button>
+                        </form>
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div v-for="(period, index) in planFactPeriods" :key="period.year + '-' + period.month" class="rounded-xl border p-4" :class="index === planFactPeriods.length - 1 ? 'border-violet-500/25 bg-violet-500/5' : 'border-zinc-800 bg-zinc-900/40'">
+                                <div class="mb-4 flex items-center justify-between"><div><div class="text-sm font-semibold capitalize text-zinc-200">{{ period.label }}</div><div class="mt-0.5 text-xs text-zinc-500">{{ index === planFactPeriods.length - 1 ? 'Текущий месяц' : 'Предыдущий месяц' }}</div></div><span v-if="!period.has_plan" class="rounded-full border border-zinc-700 px-2 py-1 text-[10px] text-zinc-500">План не назначен</span></div>
+                                <div class="space-y-4">
+                                    <div><div class="mb-1.5 flex items-end justify-between gap-3"><div><div class="text-xs text-zinc-500">Заказы</div><div class="mt-0.5 text-lg font-semibold text-white">{{ period.orders_fact.toLocaleString('ru-RU') }} <span class="text-xs font-normal text-zinc-500">из {{ period.orders_plan.toLocaleString('ru-RU') }}</span></div></div><span class="text-sm font-semibold text-blue-400">{{ planPercent(period.orders_fact, period.orders_plan) }}%</span></div><div class="h-2 overflow-hidden rounded-full bg-zinc-800"><div class="h-full rounded-full bg-blue-500 transition-all" :style="{ width: progressWidth(period.orders_fact, period.orders_plan) }"></div></div></div>
+                                    <div><div class="mb-1.5 flex items-end justify-between gap-3"><div><div class="text-xs text-zinc-500">Выкупы</div><div class="mt-0.5 text-lg font-semibold text-white">{{ period.sales_fact.toLocaleString('ru-RU') }} <span class="text-xs font-normal text-zinc-500">из {{ period.sales_plan.toLocaleString('ru-RU') }}</span></div></div><span class="text-sm font-semibold text-emerald-400">{{ planPercent(period.sales_fact, period.sales_plan) }}%</span></div><div class="h-2 overflow-hidden rounded-full bg-zinc-800"><div class="h-full rounded-full bg-emerald-500 transition-all" :style="{ width: progressWidth(period.sales_fact, period.sales_plan) }"></div></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <!-- Stocks & Campaigns -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     
                     <!-- Warehouse Stocks (Accordion) -->

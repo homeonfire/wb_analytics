@@ -12,7 +12,7 @@ class PlansController extends Controller
 {
     public function index(Request $request)
     {
-        if (!auth()->user()->is_super_admin) {
+        if (!auth()->user()->is_super_admin && !auth()->user()->can_manage_plans) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -53,9 +53,12 @@ class PlansController extends Controller
 
     public function store(Request $request)
     {
-        if (!auth()->user()->is_super_admin) {
+        if (!auth()->user()->is_super_admin && !auth()->user()->can_manage_plans) {
             abort(403, 'Unauthorized action.');
         }
+
+        $store = app('current_store') ?? null;
+        abort_unless($store, 403);
 
         $request->validate([
             'year' => 'required|integer',
@@ -65,6 +68,12 @@ class PlansController extends Controller
             'plans.*.orders_plan' => 'required|numeric|min:0',
             'plans.*.sales_plan' => 'required|numeric|min:0',
         ]);
+
+        $productIds = collect($request->plans)->pluck('product_id')->unique();
+        abort_unless(
+            Product::where('store_id', $store->id)->whereIn('id', $productIds)->count() === $productIds->count(),
+            403,
+        );
 
         $year = $request->year;
         $month = $request->month;
