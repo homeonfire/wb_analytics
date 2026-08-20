@@ -22,8 +22,12 @@ class AnalyticsController extends Controller
         $days = in_array($days, [7, 14, 30, 90], true) ? $days : 30;
         $cacheVersion = Cache::get("analytics:store:{$store->id}:version", 1);
         $cacheKey = "analytics:store:{$store->id}:days:{$days}:v:{$cacheVersion}";
-        if ($cached = Cache::get($cacheKey)) {
-            return Inertia::render('Analytics/Index', $cached);
+        $cached = Cache::get($cacheKey);
+        if (is_string($cached)) {
+            return Inertia::render('Analytics/Index', json_decode($cached, true, flags: JSON_THROW_ON_ERROR));
+        }
+        if ($cached !== null) {
+            Cache::forget($cacheKey);
         }
         $periodStart = Carbon::now()->subDays($days);
         
@@ -231,12 +235,12 @@ class AnalyticsController extends Controller
         $payload = [
             'kpis' => $kpis,
             'trend' => $trend,
-            'topProducts' => $topProducts,
-            'warehouses' => $warehouses,
-            'antiTop' => $antiTop,
+            'topProducts' => $topProducts->toArray(),
+            'warehouses' => $warehouses->toArray(),
+            'antiTop' => $antiTop->toArray(),
             'days' => $days
         ];
-        Cache::put($cacheKey, $payload, now()->addMinutes(5));
+        Cache::put($cacheKey, json_encode($payload, JSON_THROW_ON_ERROR), now()->addMinutes(5));
 
         return Inertia::render('Analytics/Index', $payload);
     }
