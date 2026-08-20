@@ -134,18 +134,25 @@ class AnalyticsController extends Controller
         $currentMonth = Carbon::now()->month;
         $currentYear = Carbon::now()->year;
 
+        $salesByProduct = DB::table('sale_raws')
+            ->where('sale_date', '>=', $periodStart)
+            ->selectRaw("store_id, nm_id, SUM(finished_price) as revenue_30d, SUM(CASE WHEN finished_price > 0 THEN 1 ELSE 0 END) as sales_count")
+            ->groupBy('store_id', 'nm_id');
+
+        $ordersByProduct = DB::table('order_raws')
+            ->where('order_date', '>=', $periodStart)
+            ->where('is_cancel', false)
+            ->selectRaw('store_id, nm_id, COUNT(*) as orders_count')
+            ->groupBy('store_id', 'nm_id');
+
         $topProducts = \App\Models\Product::where('products.store_id', $store->id)
-            ->join('sale_raws', function ($join) use ($periodStart) {
-                $join->on('products.nm_id', '=', 'sale_raws.nm_id')
-                     ->on('products.store_id', '=', 'sale_raws.store_id')
-                     ->where('sale_raws.sale_date', '>=', $periodStart);
+            ->joinSub($salesByProduct, 'sales_agg', function ($join) {
+                $join->on('products.store_id', '=', 'sales_agg.store_id')
+                    ->on('products.nm_id', '=', 'sales_agg.nm_id');
             })
-            // Left join orders to calculate orders_count for the plan
-            ->leftJoin('order_raws', function ($join) use ($periodStart) {
-                $join->on('products.nm_id', '=', 'order_raws.nm_id')
-                     ->on('products.store_id', '=', 'order_raws.store_id')
-                     ->where('order_raws.order_date', '>=', $periodStart)
-                     ->where('order_raws.is_cancel', false);
+            ->leftJoinSub($ordersByProduct, 'orders_agg', function ($join) {
+                $join->on('products.store_id', '=', 'orders_agg.store_id')
+                    ->on('products.nm_id', '=', 'orders_agg.nm_id');
             })
             ->select(
                 'products.id',
@@ -153,16 +160,15 @@ class AnalyticsController extends Controller
                 'products.vendor_code',
                 'products.main_image_url',
                 'products.abc_class',
-                DB::raw('SUM(sale_raws.finished_price) as revenue_30d'),
-                DB::raw('COUNT(DISTINCT sale_raws.id) as sales_count'),
-                DB::raw('COUNT(DISTINCT order_raws.id) as orders_count')
+                DB::raw('sales_agg.revenue_30d as revenue_30d'),
+                DB::raw('sales_agg.sales_count as sales_count'),
+                DB::raw('COALESCE(orders_agg.orders_count, 0) as orders_count')
             )
             ->withSum('warehouseStocks', 'quantity')
             ->with(['plans' => function($q) use ($currentMonth, $currentYear) {
                 $q->where('month', $currentMonth)->where('year', $currentYear);
             }])
-            ->groupBy('products.id', 'products.title', 'products.vendor_code', 'products.main_image_url', 'products.abc_class')
-            ->orderByDesc('revenue_30d')
+            ->orderByDesc('sales_agg.revenue_30d')
             ->take(10)
             ->get();
 
